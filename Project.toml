@@ -1,0 +1,6 @@
+authors = ["Ilker Kesen <ilkerksn@gmail.com>"]
+name = "Sloth"
+uuid = "599f0d3e-fa5b-11e8-3d5f-e1ebc21cfa8f"
+version = "0.1.0"
+
+[deps]
