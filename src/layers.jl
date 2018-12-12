@@ -1,24 +1,13 @@
-mutable struct Projection
-    w
-end
-
-
-(l::Projection)(x) = l.w * mat(x)
-
-
-function Projection(input_dim::Int, output_dim::Int; atype=_atype, init=xavier)
-    w = param(output_dim, input_dim; atype=atype, init=init)
-    return Projection(w)
-end
-
-
 mutable struct Linear
     w
     b
 end
 
 
-(l::Linear)(x) = l.w * mat(x) .+ l.b
+function (l::Linear)(x)
+    y = l.w * mat(x)
+    y = l.b == nothing ? y : y .+ l.b
+end
 
 
 function Linear(input_dim::Int, output_dim::Int;
@@ -36,7 +25,11 @@ mutable struct FullyConnected
 end
 
 
-(l::FullyConnected)(x) = activate.(l.w * mat(x) .+ l.b)
+function (l::FullyConnected)(x)
+    y = l.w * mat(x)
+    y = l.b == nothing ? y : y .+ l.b
+    activate.(y)
+end
 
 
 function FullyConnected(input_dim::Int, output_dim::Int, activate=relu;
@@ -54,7 +47,8 @@ end
 
 
 function (l::Conv)(x; o...)
-    conv4(l.w, x; o...) .+ l.b
+    y = conv4(l.w, x; o...)
+    y = l.b == nothing ? y : y .+ l.b
 end
 
 
@@ -73,7 +67,8 @@ end
 
 
 function (l::Deconv)(y; o...)
-    deconv4(l.w, y; o...)
+    x = deconv4(l.w, y; o...)
+    x = l.b == nothing ? x : x .+ l.b
 end
 
 
@@ -96,10 +91,9 @@ function (l::BatchNorm)(x; training=true)
 end
 
 
-function BatchNorm(dim::Int)
-    w = bnparams(dim)
+function BatchNorm(dim::Int; atype=_atype)
+    w = Param(atype(bnparams(dim)))
     m = bnmoments()
-
     return BatchNorm(w, m)
 end
 
@@ -109,7 +103,9 @@ mutable struct Embedding
 end
 
 
-(l::Embedding)(x) = l.w[:, x]
+function (l::Embedding)(x)
+    l.w[:, x]
+end
 
 
 function Embedding(vocabsize::Int, embedsize::Int; atype=_atype, init=xavier)
