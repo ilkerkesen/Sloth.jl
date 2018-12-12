@@ -85,6 +85,25 @@ function Deconv(ci::Int, co::Int, k::Int;
 end
 
 
+mutable struct BatchNorm
+    w
+    m
+end
+
+
+function (l::BatchNorm)(x; training=true)
+    batchnorm(x, l.m, l.w; training=training)
+end
+
+
+function BatchNorm(dim::Int)
+    w = bnparams(dim)
+    m = bnmoments()
+
+    return BatchNorm(w, m)
+end
+
+
 mutable struct Embedding
     w
 end
