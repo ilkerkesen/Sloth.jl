@@ -28,7 +28,7 @@ end
 function (l::FullyConnected)(x)
     y = l.w * mat(x)
     y = l.b == nothing ? y : y .+ l.b
-    activate.(y)
+    l.activate.(y)
 end
 
 
