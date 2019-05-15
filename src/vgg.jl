@@ -32,8 +32,9 @@ function VGG(config="D", num_classes=1000; atype=_atype)
 end
 
 
-# function load_weights!(vgg::VGG, filepath)
-#     for par in params(vgg)
-#         par.
-#     end
-# end
+function load_weights!(vgg::Chain, vggmat)
+    weights, has_weights = get_vgg_params(vggmat)
+    for (i,par) in enumerate(params(vgg))
+        par.value = oftype(par.value, weights[i])
+    end
+end
