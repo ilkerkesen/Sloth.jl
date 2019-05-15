@@ -1,11 +1,14 @@
 module Sloth
 
 using Knet
+using MAT
+using Images
 
 _etype = gpu() >= 0 ? Float32 : Float64
 _atype = gpu() >= 0 ? KnetArray{_etype} : Array{_etype}
 
 include("init.jl")
+include("data.jl")
 
 include("layers.jl")
 export AbstractChain
