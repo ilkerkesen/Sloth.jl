@@ -11,7 +11,6 @@ include("init.jl")
 include("data.jl")
 
 include("layers.jl")
-export AbstractChain
 export Chain
 export Linear
 export FullyConnected
@@ -23,6 +22,10 @@ export Embedding
 export Dropout
 export Relu
 export Pool
+export Activation
+export Relu, ReLU
+export Tanh
+export Sigm
 
 include("optimizers.jl")
 export init_optimizers!
