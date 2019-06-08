@@ -1,6 +1,7 @@
 module Sloth
 
 using Knet
+import Knet: relu, sigm; export relu, sigm
 using MAT
 using Images, FileIO
 
@@ -13,10 +14,9 @@ include("data.jl")
 include("layers.jl")
 export Chain
 export Linear
-export FullyConnected
-export Dense
+export Dense, FullyConnected
 export Conv
-export Deconv
+export Deconv, ConvTransposed
 export BatchNorm
 export Embedding
 export Dropout
@@ -27,15 +27,11 @@ export Relu, ReLU
 export Tanh
 export Sigm
 
-include("optimizers.jl")
-export init_optimizers!
-
-include("util.jl")
-export get_atype
-export init_opt!
+include("optimizers.jl"); export init_optimizers!
+include("util.jl"); export get_atype, get_etype, set_atype!, init_opt!
 
 include("vgg.jl")
 include("rnnutil.jl")
-
+include("beautify.jl"); export show
 
 end # module

@@ -1,8 +1,12 @@
 abstract type SlothLayer; end
 
+
 mutable struct Chain
     layers
 end
+
+
+Chain(layers...) = Chain(layers)
 
 
 function (c::Chain)(x)
@@ -106,7 +110,7 @@ end
 
 function Deconv(; input::Int, output::Int, kernel::Int,
                 padding=0, stride=1, upscale=1, mode=0,
-                atype=_atype, initw=xavier, initb=zeros, bias=false)
+                atype=_atype, initw=xavier, initb=zeros, bias=true)
     w = param(kernel, kernel, output, input; atype=atype, init=initw)
     b = bias ? param(1, 1, output, 1; atype=atype, init=initb) : eltype(w)(0)
     return Deconv(input, output, kernel, padding, stride, upscale, mode, w, b)
@@ -120,20 +124,23 @@ Deconv(input::Int, output::Int, kernel::Int; kwargs...) = Deconv(
 ConvTransposed = Deconv
 
 
-
 mutable struct Pool <: SlothLayer
     window
     padding
     stride
     mode
     maxpoolingNanOpt
-    Pool(; window=2, padding=0, stride=window, mode=0, maxpoolingNanOpt=0) =
-        new(window, padding, stride, mode, maxpoolingNanOpt)
+    alpha
+    function Pool(; window=2, padding=0, stride=window, mode=0,
+                  maxpoolingNanOpt=0, alpha=1)
+        new(window, padding, stride, mode, maxpoolingNanOpt, alpha)
+    end
 end
 
 
 function (l::Pool)(x; window=l.window, padding=l.padding, stride=l.stride,
-                   mode=l.mode, maxpoolingNanOpt=l.maxpoolingNanOpt)
+                   mode=l.mode, maxpoolingNanOpt=l.maxpoolingNanOpt,
+                   alpha=l.alpha)
     pool(x; window=window, padding=padding, stride=stride, mode=mode,
          maxpoolingNanOpt=maxpoolingNanOpt)
 end
