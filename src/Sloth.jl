@@ -26,10 +26,12 @@ export Activation
 export Relu, ReLU
 export Tanh
 export Sigm
+export Flatten
+export FlattenRNNHidden
 
+include("rnn.jl"); export init!, ReluRNN, TanhRNN, SigmRNN, LSTM, BiLSTM
 include("optimizers.jl"); export init_optimizers!
 include("util.jl"); export get_atype, get_etype, set_atype!, init_opt!
-
 include("vgg.jl")
 include("rnnutil.jl")
 include("beautify.jl"); export show

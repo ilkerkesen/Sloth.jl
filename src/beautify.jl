@@ -32,7 +32,7 @@ function pretty(io::IO, chain::Chain, level=1)
 end
 
 
-get_layer_type(l::SlothLayer) = string(typeof(l))
+get_layer_type(l::SlothLayer) = titlecase(split(string(typeof(l)), ".")[end])
 get_layer_type(l::Dense) = l.f == identity ? "Linear" : "Dense"
 get_layer_type(l::Activation) = titlecase(split(string(l.f), ".")[end])
 get_layer_type(l::Pool) = ("MaxPool", "PaddedMeanPool", "MeanPool")[l.mode+1]

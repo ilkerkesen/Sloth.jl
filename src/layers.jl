@@ -210,3 +210,15 @@ Relu() = Activation()
 ReLU() = Relu()
 Tanh() = Activation(tanh)
 Sigm() = Activation(sigm)
+
+
+mutable struct Flatten <: SlothLayer; end
+
+
+(l::Flatten)(x) = reshape(x, :,  size(x)[end])
+
+
+mutable struct FlattenRNNHidden <: SlothLayer; end
+
+
+(l::FlattenRNNHidden)(x) = ndims(x) == 1 ? x : reshape(x, size(x,1), :)
