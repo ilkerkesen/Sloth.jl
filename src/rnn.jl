@@ -1,24 +1,20 @@
-function init!(r::RNN; h0=0, c0=0)
-    r.h, r.c = h0, c0
+struct FlattenRNNHidden <: SlothLayer; end
+(l::FlattenRNNHidden)(x) = ndims(x) == 1 ? x : reshape(x, size(x,1), :)
+
+
+function reset!(r::RNN; h=0.0f0, c=0.f0)
+    r.h, r.c = h, c
     nothing
 end
 
 
-ReluRNN(; input::Int, output::Int, kwargs...) = RNN(
-    input, output; rnnType=:relu, kwargs...)
+function RNN(; input_size::Int, hidden_size::Int, kwargs...)
+    RNN(input_size, hidden_size; kwargs...)
+end
 
 
-TanhRNN(; input::Int, output::Int, kwargs...) = RNN(
-    input, output; rnnType=:tanh, kwargs...)
-
-
-SigmRNN(; input::Int, output::Int, kwargs...) = RNN(
-    input, output; rnnType=:sigm, kwargs...)
-
-
-LSTM(; input::Int, output::Int, kwargs...) = RNN(
-    input, output; rnnType=:lstm, kwargs...)
-
-
-BiLSTM(; input::Int, output::Int, kwargs...) = LSTM(;
-    input=input, output=output, bidirectional=true, kwargs...)
+ReluRNN(; kwargs...) = RNN(; rnnType=:relu, kwargs...)
+TanhRNN(; kwargs...) = RNN(; rnnType=:tanh, kwargs...)
+SigmRNN(; kwargs...) = RNN(; rnnType=:sigm, kwargs...)
+LSTM(; kwargs...) = RNN(; kwargs...)
+BiLSTM(; kwargs...) = RNN(; bidirectional=true, kwargs...)
