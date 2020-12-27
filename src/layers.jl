@@ -1,12 +1,14 @@
+import AutoGrad: recording
+
 abstract type SlothLayer; end
 
 
 struct Sequential
-    layers::Array{T} where T <: SlothLayer
+    layers::Array{T} where T <: Union{Sequential, SlothLayer}
 end
 
 
-Sequential(layers...) = Sequential(layers)
+Sequential(layers...) = Sequential([layers...])
 
 
 function (model::Sequential)(x)
@@ -20,8 +22,8 @@ end
 struct Linear <: SlothLayer
     in_features::Int
     out_features::Int
-    weight::Union{SlothParam, SlothArray}
-    bias::Union{SlothParam, SlothArray}
+    weight::SlothWeight
+    bias::SlothBias
 end
 
 
@@ -32,7 +34,7 @@ end
 
 function Linear(; in_features::Int, out_features::Int, init=xavier, bias=true)
     w = param(out_features, in_features; init=init)
-    b = ifelse(bias, param0(out_features, 1), 0.0f0)
+    b = ifelse(bias, param0(out_features, 1), F(0.0))
     return Linear(in_features, out_features, w, b)
 end
 
@@ -40,13 +42,13 @@ end
 struct Conv <: SlothLayer
     in_channels::Int
     out_channels::Int
-    kernel_size::IntHyparam
+    kernel_size::IntHyperparam
     stride::IntHyperparam
     padding::IntHyperparam
     dilation::IntHyperparam
     mode::Int
-    weight::Union{SlothParam, SlothArray}
-    bias::Union{SlothParam, SlothArray}
+    weight::SlothWeight
+    bias::SlothBias
 end
 
 
@@ -75,7 +77,7 @@ function Conv(;
     k = ifelse(typeof(k) <: Int, (k, k), k)
 
     w = param(k..., in_channels, out_channels; init=init)
-    b = ifelse(bias, param0(1, 1, out_channels, 1), 0.0f0)
+    b = ifelse(bias, param0(1, 1, out_channels, 1), F(0.0))
 
     return Conv(
         in_channels,
@@ -93,13 +95,13 @@ end
 struct ConvTranspose <: SlothLayer
     in_channels::Int
     out_channels::Int
-    kernel_size::IntHyparam
+    kernel_size::IntHyperparam
     stride::IntHyperparam
     padding::IntHyperparam
     dilation::IntHyperparam
     mode::Int
-    weight::Union{SlothParam, SlothArray}
-    bias::Union{SlothParam, SlothArray}
+    weight::SlothWeight
+    bias::SlothBias
 end
 
 
@@ -128,9 +130,9 @@ function ConvTranspose(;
     k = ifelse(typeof(k) <: Int, (k, k), k)
 
     w = param(k..., out_channels, in_channels; init=init)
-    b = ifelse(bias, param0(1, 1, out_channels, 1), 0.0f0)
+    b = ifelse(bias, param0(1, 1, out_channels, 1), F(0.0))
 
-    return Conv(
+    return ConvTranspose(
         in_channels,
         out_channels,
         kernel_size,
@@ -143,7 +145,7 @@ function ConvTranspose(;
 end
 
 
-@enum PoolMode MAX_POOL=1 PADDED_AVG_POOL=2 AVG_POOL=3
+@enum PoolMode MAX_POOL=0 PADDED_AVG_POOL=1 AVG_POOL=2
 
 
 struct Pool <: SlothLayer
@@ -162,6 +164,9 @@ function Pool(;
     dilation::IntHyperparam=1,
     mode::PoolMode
 )
+
+    dilation != 1 && @warn "Knet does not support dilated pooling."
+    stride = ifelse(isa(stride, Nothing), window, stride)
     return Pool(window, stride, padding, dilation, mode)
 end
 
@@ -171,7 +176,6 @@ function (layer::Pool)(x)
         window=layer.window,
         stride=layer.stride,
         padding=layer.padding,
-        dilation=layer.dilation,
         mode=Int(layer.mode))
 end
 
@@ -181,11 +185,11 @@ PaddedAvgPool(; kwargs...) = Pool(; mode=PADDED_AVG_POOL, kwargs...)
 AvgPool(; kwargs...) = Pool(; mode=AVG_POOL, kwargs...)
 
 
-struct BatchNorm <: SlothLayer
+struct BatchNorm{T<:AbstractFloat} <: SlothLayer
     num_features::Int
-    momentum::T where T <: Float
-    eps::T where T <: Float
-    weight::Union{SlothParam, SlothArray}
+    momentum::T
+    eps::T
+    weight::SlothWeight
     moments::BNMoments
 end
 
@@ -197,10 +201,10 @@ end
 
 function BatchNorm(;
     num_features::Int,
-    momentum::Float=0.1f0,
-    eps::Float=Float32(1e-5)
-)
-    weight, moments = Param(bnparams(num_features)), bnmoments()
+    momentum::T=F(0.1),
+    eps::T=F(1.0f-5)
+) where T <: AbstractFloat
+    weight, moments = Param(Knet.atype((bnparams(num_features)))), bnmoments()
     return BatchNorm(num_features, momentum, eps, weight, moments)
 end
 
@@ -208,7 +212,7 @@ end
 struct Embedding <: SlothLayer
     num_embeddings::Int
     embedding_dim::Int
-    weight::Union{SlothParam, SlothArray}
+    weight::SlothWeight
 end
 
 
@@ -224,16 +228,14 @@ end
 
 
 struct Dropout <: SlothLayer
-    p::Float
+    p::AbstractFloat
+    Dropout(; p::AbstractFloat=F(0.5)) = new(p)
 end
 
 
-function (layer::Dropout)(x)
-    return dropout(x, p)
+function (layer::Dropout)(x; drop=recording())
+    return dropout(x, layer.p; drop=drop)
 end
-
-
-Dropout(p::Float=0.0f0) = Dropout(p)
 
 
 struct Activation <: SlothLayer
@@ -250,14 +252,14 @@ Sigm() = Activation(sigm)
 
 
 struct LeakyRelu
-    α::Float
-    LeakyRelu(α::Float=0.02) = new(α)
+    α::AbstractFloat
+    LeakyRelu(α::AbstractFloat=F(0.02)) = new(α)
 end
 
 
 function (layer::LeakyRelu)(x)
     pos = relu.(x)
-    neg = min.(0.0f0, x)
+    neg = min.(F(0.0), x)
     return pos + layer.α .* neg
 end
 

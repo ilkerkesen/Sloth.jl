@@ -3,27 +3,19 @@ module Sloth
 using Knet
 using MAT
 using Images, FileIO
+import Knet.Ops20: BNMoments
+import Knet: atype
 
 
-const Float = Union{Float32, Float64}
-const SlothArray = Union{Array{T}, KnetArray{T}} where T <: Float
+const SlothArray = Union{Array{T}, KnetArray{T}} where T <: AbstractFloat
 const SlothParam = Param{T} where T <: SlothArray
+const SlothWeight = Union{SlothArray, SlothParam}
+const SlothBias = Union{SlothArray, SlothParam, AbstractFloat}
 const IntHyperparam = Union{Int, Tuple{Vararg{Int}}}
-
+F(x::T) where T <: AbstractFloat = eltype(atype())(x)
 
 include("layers.jl")
-export Sequential
-export Linear
-export Conv
-export ConvTranspose
-export Pool, MaxPool, AvgPool
-export BatchNorm
-export Dropout
-export Embedding
-export Activation, Relu, Tanh, Sigm, LeakyRelu
-export Flatten, FlattenRNNHidden
-
-include("rnn.jl"); export reset!, ReluRNN, TanhRNN, SigmRNN, LSTM, BiLSTM
-# include("beautify.jl"); export show
+include("rnn.jl")
+include("beautify.jl")
 
 end # module

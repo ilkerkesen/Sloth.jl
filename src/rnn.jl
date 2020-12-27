@@ -15,6 +15,6 @@ end
 
 ReluRNN(; kwargs...) = RNN(; rnnType=:relu, kwargs...)
 TanhRNN(; kwargs...) = RNN(; rnnType=:tanh, kwargs...)
-SigmRNN(; kwargs...) = RNN(; rnnType=:sigm, kwargs...)
 LSTM(; kwargs...) = RNN(; kwargs...)
+GRU(; kwargs...) = RNN(; rnnType=:gru, kwargs...)
 BiLSTM(; kwargs...) = RNN(; bidirectional=true, kwargs...)

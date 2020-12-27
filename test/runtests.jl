@@ -1,8 +1,7 @@
 using Knet
 using AutoGrad
 import AutoGrad: gcheck
-using Sloth
 using Test
+using CUDA
 
-atype = Sloth._atype
 include("layers.jl")
