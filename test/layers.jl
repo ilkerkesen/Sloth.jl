@@ -1,84 +1,120 @@
-import Knet: relu
+import Knet: relu, atype
+import Sloth: F
+
 
 @testset "layers" begin
-    batchsize, input, output = 2, 3, 4
-    x2d = atype(randn(input, batchsize))
+    batch_size, in_features, out_features = 2, 3, 4
+    x2d = atype(randn(in_features, batch_size))
     @testset "linear" begin
-        layer = y = nothing
-        @test (layer=Linear(input, output); true)
-        @test (y = layer(x2d); true)
-        @test layer.w * x2d .+ layer.b ≈ y
-        @test size(layer.w) == (output, input)
-        @test layer.inputsize == input
-        @test layer.outputsize == output
-        @test size(layer.b) == (output, 1)
-        @test (layer=Linear(input=input, output=output, bias=false); true)
-        @test size(layer.w) == (output, input)
-        @test size(layer.b) == ()
-        @test layer.b == 0.0
+        import Sloth: Linear
+        layer = Linear(in_features=in_features, out_features=out_features)
+        @test layer.weight * x2d .+ layer.bias ≈ layer(x2d)
+        @test size(layer.weight) == (out_features, in_features)
+        @test layer.in_features == in_features
+        @test layer.out_features == out_features
+        @test size(layer.bias) == (out_features, 1)
+
+        layer = Linear(
+            in_features=in_features,
+            out_features=out_features,
+            bias=false)
+        @test size(layer.bias) == ()
+        @test layer.bias == F(0.0)
     end
 
-    @testset "dense" begin
-        layer = nothing
-        @test (layer=Dense(input, output); true)
-        @test relu.(layer.w * x2d .+ layer.b) ≈ layer(x2d)
-    end
-
-    width, height, kernel = 8, 8, 4
-    x4d = atype(rand(width, height, input, batchsize))
-    y4d = nothing
+    width, height, in_channels, out_channels, kernel_size = 8, 8, 2, 3, 5
+    x4d = atype(rand(width, height, in_channels, batch_size))
     @testset "conv" begin
-        layer = nothing
-        @test (layer = Conv(input=input, output=output, kernel=kernel); true)
-        @test (y4d = layer(x4d); true)
-        @test conv4(layer.w, x4d) .+ layer.b ≈ y4d
-        @test (l=Conv(input,output,kernel); conv4(l.w,x4d) .+ l.b ≈ l(x4d))
-    end
+        import Sloth: Conv, ConvTranspose
 
-    @testset "deconv" begin
-        layer = nothing
-        @test (layer=Deconv(input=output, output=input, kernel=kernel); true)
+        layer = Conv(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size)
+        @test conv4(layer.weight, x4d) .+ layer.bias ≈ layer(x4d)
+
+        y4d = layer(x4d)
+        layer = ConvTranspose(
+            in_channels=out_channels,
+            out_channels=in_channels,
+            kernel_size=kernel_size)
         @test (size(layer(y4d)) == size(x4d))
-        @test (layer(y4d) ≈ deconv4(layer.w,y4d) .+ layer.b)
-        @test (l=Deconv(output,input,kernel); size(l(y4d)) == size(x4d))
+        @test (layer(y4d) ≈ deconv4(layer.weight ,y4d) .+ layer.bias)
     end
 
     @testset "pool" begin
-        layer = nothing
-        @test (layer = Pool(); true)
+        import Sloth: MaxPool, AvgPool, PaddedAvgPool
+        layer = MaxPool()
         @test (layer(x4d) ≈ pool(x4d))
-        @test (layer(x4d; mode=1) ≈ pool(x4d; mode=1))
+        layer = AvgPool()
+        @test (layer(x4d) ≈ pool(x4d, mode=2))
+        layer = PaddedAvgPool()
+        @test (layer(x4d) ≈ pool(x4d, mode=1))
     end
 
     @testset "batchnorm" begin
-        layer = y = nothing
-        @test (layer = BatchNorm(input); true)
-        @test (y = layer(x2d); y ≈ batchnorm(x2d, layer.m, layer.w))
-        @test (l = BatchNorm(input); l(x4d) ≈ batchnorm(x4d, l.m, l.w))
+        import Sloth: BatchNorm
+        layer = BatchNorm(num_features=in_features)
+        @test layer(x2d) ≈ batchnorm(x2d, layer.moments, layer.weight)
+        layer = BatchNorm(num_features=in_channels)
+        @test layer(x4d) ≈ batchnorm(x4d, layer.moments, layer.weight)
     end
 
-    x1d = rand(1:input, batchsize)
+    x1d = rand(1:in_features, batch_size)
     @testset "embedding" begin
-        layer = y1d = nothing
-        @test (layer = Embedding(vocabsize=input, embedsize=output); true)
-        @test (y1d = layer(x1d); y1d ≈ layer.w[:, x1d])
-        @test size(y1d) == (output, batchsize)
+        import Sloth: Embedding
+        layer = Embedding(
+            num_embeddings=in_features,
+            embedding_dim=out_features)
+        @test (layer(x1d) ≈ layer.weight[:, x1d])
     end
 
     @testset "dropout" begin
-        layer = y = nothing
-        @test (layer = Dropout(); true)
+        import Sloth: Dropout
+        layer = Dropout()
         @test layer(x2d) == x2d
-        @test (Knet.seed!(1); y = layer(x2d; drop=true); true)
-        @test (Knet.seed!(1); dropout(x2d, layer.p; drop=true) ≈ y)
+        @test begin
+            Knet.seed!(1); y1 = layer(x2d; drop=true)
+            Knet.seed!(1); y2 = dropout(x2d, layer.p; drop=true)
+            y1 ≈ y2
+        end
     end
 
     @testset "activation" begin
-        layer = y = nothing
-        @test (layer = Activation(); true)
-        @test layer(x2d) ≈ relu.(x2d)
-        @test (l = ReLU(); l(x2d) ≈ relu.(x2d))
-        @test (l = Tanh(); l(x2d) ≈ tanh.(x2d))
-        @test (l = Sigm(); l(x2d) ≈ sigm.(x2d))
+        import Sloth: Relu, Tanh, Sigm, LeakyRelu
+        layer = Relu(); @test layer(x2d) ≈ relu.(x2d)
+        layer = Tanh(); @test layer(x2d) ≈ tanh.(x2d)
+        layer = Sigm(); @test layer(x2d) ≈ sigm.(x2d)
+        layer = LeakyRelu(); F = eltype(atype())
+        @test layer.α > F(0)
+        @test layer(x2d) ≈ max.(F(0), x2d) + layer.α .* min.(F(0), x2d)
+    end
+
+    input_size, hidden_size = 3, 5
+    @testset "recurrent" begin
+        import Sloth: ReluRNN, TanhRNN, LSTM, GRU, BiLSTM
+        relurnn = ReluRNN(input_size=input_size, hidden_size=hidden_size)
+        tanhrnn = TanhRNN(input_size=input_size, hidden_size=hidden_size)
+        lstm = LSTM(input_size=input_size, hidden_size=hidden_size)
+        gru = GRU(input_size=input_size, hidden_size=hidden_size)
+        bilstm = BiLSTM(input_size=input_size, hidden_size=hidden_size)
+
+        @test relurnn.mode == 0
+        @test tanhrnn.mode == 1
+        @test lstm.mode == 2
+        @test gru.mode == 3
+        @test lstm.inputSize == input_size
+        @test lstm.hiddenSize == hidden_size
+        @test lstm.direction == 0
+        @test bilstm.mode == 2
+        @test bilstm.direction == 1
+    end
+
+    @testset "sequential" begin
+        import Sloth: Sequential, Linear
+        net = Sequential(
+            Linear(in_features=in_features, out_features=out_features),
+            Linear(in_features=out_features, out_features=out_features))
+        @test net(x2d) ≈ net.layers[2](net.layers[1](x2d))
     end
 end

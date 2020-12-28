@@ -1,39 +1,25 @@
 module Sloth
 
 using Knet
-import Knet: relu, sigm; export relu, sigm
 using MAT
 using Images, FileIO
+import Knet.Ops20: BNMoments
+import Knet: atype
 
-_etype = gpu() >= 0 ? Float32 : Float64
-_atype = gpu() >= 0 ? KnetArray{_etype} : Array{_etype}
 
-include("init.jl")
-include("data.jl")
+const SlothArray = Union{Array{T}, KnetArray{T}} where T <: AbstractFloat
+const SlothParam = Param{T} where T <: SlothArray
+const SlothWeight = Union{SlothArray, SlothParam}
+const SlothBias = Union{SlothArray, SlothParam, AbstractFloat}
+const IntHyperparam = Union{Int, Tuple{Vararg{Int}}}
+F(x::T) where T <: AbstractFloat = eltype(atype())(x)
+dir() = abspath(@__DIR__)
+dir(args...) = abspath(joinpath(dir(), args...))
 
 include("layers.jl")
-export Chain
-export Linear
-export Dense, FullyConnected
-export Conv
-export Deconv, ConvTransposed
-export BatchNorm
-export Embedding
-export Dropout
-export Relu
-export Pool
-export Activation
-export Relu, ReLU
-export Tanh
-export Sigm
-export Flatten
-export FlattenRNNHidden
-
-include("rnn.jl"); export init!, ReluRNN, TanhRNN, SigmRNN, LSTM, BiLSTM
-include("optimizers.jl"); export init_optimizers!
-include("util.jl"); export get_atype, get_etype, set_atype!, init_opt!
+include("rnn.jl")
+include("beautify.jl")
+include("data.jl")
 include("vgg.jl")
-include("rnnutil.jl")
-include("beautify.jl"); export show
 
 end # module
