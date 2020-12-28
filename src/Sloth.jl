@@ -13,9 +13,13 @@ const SlothWeight = Union{SlothArray, SlothParam}
 const SlothBias = Union{SlothArray, SlothParam, AbstractFloat}
 const IntHyperparam = Union{Int, Tuple{Vararg{Int}}}
 F(x::T) where T <: AbstractFloat = eltype(atype())(x)
+dir() = abspath(@__DIR__)
+dir(args...) = abspath(joinpath(dir(), args...))
 
 include("layers.jl")
 include("rnn.jl")
 include("beautify.jl")
+include("data.jl")
+include("vgg.jl")
 
 end # module

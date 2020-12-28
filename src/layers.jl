@@ -1,14 +1,12 @@
+import Base: getindex
 import AutoGrad: recording
 
 abstract type SlothLayer; end
 
 
 struct Sequential
-    layers::Array{T} where T <: Union{Sequential, SlothLayer}
+    layers::Array
 end
-
-
-Sequential(layers...) = Sequential([layers...])
 
 
 function (model::Sequential)(x)
@@ -17,6 +15,9 @@ function (model::Sequential)(x)
     end
     return x
 end
+
+
+getindex(seq::Sequential, ind::Union{Int, UnitRange}) = seq.layers[ind]
 
 
 struct Linear <: SlothLayer
